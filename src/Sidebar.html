@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockPing</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Google Sans', 'Roboto', sans-serif; font-size: 13px; color: #202124; background: #f8f9fa; padding: 8px; }
+    .header { display: flex; align-items: center; gap: 8px; padding: 4px 0 12px; }
+    .header-icon { width: 28px; height: 28px; background: #0f9d58; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+    .header-title { font-size: 16px; font-weight: 700; color: #202124; }
+    .tabs { display: flex; border-bottom: 2px solid #e8eaed; margin-bottom: 14px; }
+    .tab { padding: 8px 10px; cursor: pointer; font-size: 12px; font-weight: 500; color: #5f6368; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color .15s; }
+    .tab.active { color: #0f9d58; border-bottom-color: #0f9d58; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(60,64,67,.15); padding: 12px 14px; margin-bottom: 10px; }
+    .card-title { font-size: 11px; font-weight: 700; color: #5f6368; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .form-row { margin-bottom: 10px; }
+    .form-row label { display: block; font-size: 11px; font-weight: 500; color: #5f6368; margin-bottom: 3px; }
+    .form-row input, .form-row select { width: 100%; padding: 6px 8px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; font-family: inherit; color: #202124; background: #fff; outline: none; transition: border-color .15s; }
+    .form-row input:focus, .form-row select:focus { border-color: #0f9d58; box-shadow: 0 0 0 2px rgba(15,157,88,.12); }
+    .col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 7px 14px; border-radius: 4px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; border: none; transition: background .15s; white-space: nowrap; }
+    .btn-primary { background: #0f9d58; color: #fff; }
+    .btn-primary:hover { background: #0b8043; }
+    .btn-secondary { background: #fff; color: #0f9d58; border: 1px solid #dadce0; }
+    .btn-secondary:hover { background: #f0faf4; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-full { width: 100%; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .badge-free { background: #e8f0fe; color: #1a73e8; }
+    .badge-pro  { background: #fce8b2; color: #f29900; }
+    .status-bar { padding: 8px 10px; border-radius: 4px; font-size: 12px; margin-bottom: 10px; display: none; }
+    .status-bar.show { display: block; }
+    .status-bar.success { background: #e6f4ea; color: #137333; }
+    .status-bar.error   { background: #fce8e6; color: #c5221f; }
+    .status-bar.info    { background: #e8f0fe; color: #1558b0; }
+    .license-status { display: flex; align-items: center; gap: 8px; padding: 8px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px; }
+    .detect-btn { padding: 5px 10px; background: #e8f0fe; color: #1a73e8; border: 1px solid #c5d9f7; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; font-family: inherit; width: 100%; margin-top: 4px; }
+    .detect-btn:hover { background: #d3e3fd; }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; margin-right: 4px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-icon">&#128230;</div>
+  <div class="header-title">StockPing</div>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="columns">Columns</div>
+  <div class="tab" data-tab="settings">Settings</div>
+</div>
+
+<div class="tab-panel active" id="tab-dashboard">
+  <div id="licenseInfo" class="license-status">
+    <span id="licenseText" style="font-size:12px;color:#5f6368">Loading...</span>
+  </div>
+  <div class="card">
+    <div class="card-title">Stock Legend</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:10px;color:#5f6368">&#11044; <span style="color:#ea4335">Out of stock</span></span>
+      <span style="font-size:10px;color:#5f6368">&#11044; <span style="color:#f9ab00">Low stock</span></span>
+      <span style="font-size:10px;color:#5f6368">&#11044; <span style="color:#34a853">Normal</span></span>
+    </div>
+  </div>
+  <button class="btn btn-primary btn-full" id="checkBtn" onclick="runCheckNow()">Check Stock Now</button>
+  <button class="btn btn-secondary btn-full" style="margin-top:6px" onclick="runColorUpdate()">Update Color Codes</button>
+</div>
+
+<div class="tab-panel" id="tab-columns">
+  <div class="card">
+    <div class="card-title">Sheet &amp; Header</div>
+    <div class="form-row"><label>Target Sheet</label><select id="sheetName" onchange="onSheetChange()"></select></div>
+    <div class="form-row"><label>Header Row</label><input type="number" id="headerRow" value="1" min="1" max="20" style="width:80px" /></div>
+    <button class="detect-btn" onclick="autoDetect()">Auto-Detect Columns</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Column Mapping</div>
+    <div class="col-grid">
+      <div class="form-row"><label>Item Name</label><select id="colItem"></select></div>
+      <div class="form-row"><label>Current Stock</label><select id="colCurrent"></select></div>
+      <div class="form-row"><label>Min Stock</label><select id="colMinimum"></select></div>
+      <div class="form-row"><label>Order Email <span class="badge badge-pro">PRO</span></label><select id="colOrderEmail"></select></div>
+    </div>
+  </div>
+  <button class="btn btn-primary btn-full" id="saveColBtn" onclick="saveColumns()">Save Column Settings</button>
+</div>
+
+<div class="tab-panel" id="tab-settings">
+  <div class="card">
+    <div class="card-title">Check Interval</div>
+    <div class="form-row"><label>Trigger</label>
+      <select id="triggerInterval">
+        <option value="daily">Daily at 9:00 AM</option>
+        <option value="6hours">Every 6 hours</option>
+      </select>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Notification</div>
+    <div class="form-row"><label>Webhook Type</label>
+      <select id="webhookType">
+        <option value="">-- None --</option>
+        <option value="slack">Slack</option>
+        <option value="discord">Discord</option>
+        <option value="googlechat">Google Chat</option>
+        <option value="line">LINE Notify (Pro)</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Webhook URL</label><input type="url" id="webhookUrl" placeholder="https://hooks.slack.com/..." /></div>
+    <div class="form-row"><label>Email (comma separated)</label><input type="text" id="emailTo" placeholder="user@example.com" /></div>
+    <button class="btn btn-secondary btn-full" style="margin-top:4px" onclick="sendTest()">Send Test</button>
+  </div>
+  <div class="card">
+    <div class="card-title">License</div>
+    <div class="form-row"><label>License Key</label><input type="text" id="licenseKey" placeholder="Enter Pro license key" /></div>
+    <button class="btn btn-secondary btn-full" onclick="activateLicense()">Activate</button>
+  </div>
+  <button class="btn btn-primary btn-full" id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelector('[data-tab="' + name + '"]').classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+  document.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() { switchTab(this.dataset.tab); });
+  });
+
+  function showStatus(msg, type, dur) {
+    var bar = document.getElementById('statusBar');
+    bar.textContent = msg;
+    bar.className = 'status-bar show ' + (type || 'info');
+    if (dur !== 0) setTimeout(function() { bar.classList.remove('show'); }, dur || 3500);
+  }
+
+  function runScript(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function(resolve, reject) {
+      var r = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      r[fn].apply(r, args);
+    });
+  }
+
+  function init() {
+    runScript('getLicenseInfo').then(function(info) {
+      var txt = info.isPro
+        ? '<span class="badge badge-pro">PRO</span> Unlimited items'
+        : '<span class="badge badge-free">FREE</span> Up to 10 items';
+      document.getElementById('licenseText').innerHTML = txt;
+    });
+    runScript('getSheetNames').then(function(names) {
+      var sel = document.getElementById('sheetName');
+      sel.innerHTML = '<option value="">-- Select Sheet --</option>' +
+        names.map(function(n) { return '<option value="' + escHtml(n) + '">' + escHtml(n) + '</option>'; }).join('');
+    });
+    runScript('getStockSettings').then(function(s) {
+      document.getElementById('triggerInterval').value = s.triggerInterval || 'daily';
+      document.getElementById('webhookType').value = s.webhookType || '';
+      document.getElementById('webhookUrl').value = s.webhookUrl || '';
+      document.getElementById('emailTo').value = s.emailTo || '';
+      if (s.sheetName) {
+        document.getElementById('sheetName').value = s.sheetName;
+        document.getElementById('headerRow').value = s.headerRow || 1;
+        loadColumnOptions(s.sheetName, { item: s.colItem, current: s.colCurrent, minimum: s.colMinimum, orderEmail: s.colOrderEmail });
+      }
+    });
+  }
+
+  function onSheetChange() {
+    var sheet = document.getElementById('sheetName').value;
+    if (sheet) loadColumnOptions(sheet, null);
+  }
+
+  function loadColumnOptions(sheetName, selected) {
+    runScript('detectColumns', sheetName).then(function(res) {
+      if (!res.success) return;
+      var mapping = res.mapping;
+      ['colItem','colCurrent','colMinimum','colOrderEmail'].forEach(function(id, i) {
+        var keys = ['item','current','minimum','orderEmail'];
+        var sel = document.getElementById(id);
+        var val = (selected && selected[keys[i]]) || mapping[keys[i]] || '';
+        var options = '<option value="">-- None --</option>';
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(function(c) {
+          options += '<option value="' + c + '"' + (val === c ? ' selected' : '') + '>' + c + '</option>';
+        });
+        sel.innerHTML = options;
+      });
+    });
+  }
+
+  function autoDetect() {
+    var sheet = document.getElementById('sheetName').value;
+    if (!sheet) { showStatus('Please select a sheet first.', 'error'); return; }
+    loadColumnOptions(sheet, null);
+    showStatus('Auto-detection complete.', 'success');
+  }
+
+  function saveColumns() {
+    var btn = document.getElementById('saveColBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Saving...';
+    var config = buildConfig();
+    runScript('saveStockSettings', config).then(function(res) {
+      btn.disabled = false; btn.textContent = 'Save Column Settings';
+      if (res.success) showStatus('Saved!', 'success');
+      else showStatus(res.error || 'Failed', 'error');
+    }).catch(function(e) { btn.disabled = false; btn.textContent = 'Save Column Settings'; showStatus('Error: ' + e.message, 'error'); });
+  }
+
+  function saveSettings() {
+    var btn = document.getElementById('saveSettingsBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
+    runScript('saveStockSettings', buildConfig()).then(function(res) {
+      btn.disabled = false; btn.textContent = 'Save Settings';
+      if (res.success) showStatus('Settings saved!', 'success');
+      else showStatus(res.error || 'Failed', 'error');
+    }).catch(function(e) { btn.disabled = false; btn.textContent = 'Save Settings'; showStatus('Error: ' + e.message, 'error'); });
+  }
+
+  function buildConfig() {
+    return {
+      sheetName: document.getElementById('sheetName').value,
+      headerRow: parseInt(document.getElementById('headerRow').value) || 1,
+      colItem: document.getElementById('colItem').value,
+      colCurrent: document.getElementById('colCurrent').value,
+      colMinimum: document.getElementById('colMinimum').value,
+      colOrderEmail: document.getElementById('colOrderEmail').value,
+      triggerInterval: document.getElementById('triggerInterval').value,
+      webhookType: document.getElementById('webhookType').value,
+      webhookUrl: document.getElementById('webhookUrl').value.trim(),
+      emailTo: document.getElementById('emailTo').value.trim(),
+    };
+  }
+
+  function sendTest() {
+    showStatus('Sending...', 'info', 0);
+    runScript('sendTestNotification').then(function(res) {
+      if (res.success) showStatus('Test sent!', 'success');
+      else showStatus(res.error || 'Failed', 'error');
+    }).catch(function(e) { showStatus('Error: ' + e.message, 'error'); });
+  }
+
+  function activateLicense() {
+    var key = document.getElementById('licenseKey').value.trim();
+    if (!key) { showStatus('Please enter a license key.', 'error'); return; }
+    runScript('validateLicense', key).then(function(valid) {
+      if (valid) { showStatus('Pro activated!', 'success'); init(); }
+      else showStatus('Invalid key.', 'error');
+    }).catch(function(e) { showStatus('Error: ' + e.message, 'error'); });
+  }
+
+  function runCheckNow() {
+    var btn = document.getElementById('checkBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Checking...';
+    runScript('checkStock').then(function() {
+      btn.disabled = false; btn.textContent = 'Check Stock Now';
+      showStatus('Stock check complete!', 'success');
+    }).catch(function(e) { btn.disabled = false; btn.textContent = 'Check Stock Now'; showStatus('Error: ' + e.message, 'error'); });
+  }
+
+  function runColorUpdate() {
+    showStatus('Updating...', 'info', 0);
+    runScript('updateColorCodes').then(function() { showStatus('Colors updated!', 'success'); })
+      .catch(function(e) { showStatus('Error: ' + e.message, 'error'); });
+  }
+
+  function escHtml(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  init();
+</script>
+</body>
+</html>
